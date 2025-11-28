@@ -41,9 +41,16 @@ import {
 
 contract Raffle is VRFConsumerBaseV2Plus {
     error Raffle__SendEnoughETH();
+    error Raffle__TransferFailed();
+    error Raffle__RaffleNotOpen();
 
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
+
+    enum RaffleState {
+        OPEN,
+        CALCULATING
+    }
 
     uint256 private immutable ENTRANCE_FEE;
     uint256 private immutable INTERVAL;
@@ -53,8 +60,11 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     address payable[] private s_players;
     uint256 private s_lastTimeStamp;
+    address private s_recentWinner;
+    RaffleState private s_raffleState;
 
     event RaffleEntered(address indexed player);
+    event WinnerPicked(address indexed winner);
 
     constructor(
         uint256 entranceFee,
@@ -66,10 +76,12 @@ contract Raffle is VRFConsumerBaseV2Plus {
     ) VRFConsumerBaseV2Plus(vrfCoordinator) {
         ENTRANCE_FEE = entranceFee;
         INTERVAL = interval;
-        s_lastTimeStamp = block.timestamp;
         KEY_HASH = gasLane;
         SUB_ID = subId;
         CALLBACK_GAS_LIMIT = callbackGasLimit;
+
+        s_lastTimeStamp = block.timestamp;
+        s_raffleState = RaffleState.OPEN;
     }
 
     function enterRaffle() external payable {
@@ -78,6 +90,10 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
         if (msg.value < ENTRANCE_FEE) {
             revert Raffle__SendEnoughETH();
+        }
+
+        if (s_raffleState != RaffleState.OPEN) {
+            revert Raffle__RaffleNotOpen();
         }
 
         s_players.push(payable(msg.sender));
@@ -89,6 +105,8 @@ contract Raffle is VRFConsumerBaseV2Plus {
         if ((block.timestamp - s_lastTimeStamp) > INTERVAL) {
             revert();
         }
+
+        s_raffleState = RaffleState.CALCULATING;
 
         VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient
             .RandomWordsRequest({
@@ -105,10 +123,29 @@ contract Raffle is VRFConsumerBaseV2Plus {
         uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
     }
 
+    // CEI: Checks - Effects - Interactions
     function fulfillRandomWords(
         uint256 requestId,
         uint256[] calldata randomWords
-    ) internal virtual override {}
+    ) internal virtual override {
+        // Checks
+
+        // Effects
+        uint256 indexOfWinner = randomWords[0] % s_players.length;
+        address payable recentWinner = s_players[indexOfWinner];
+        s_recentWinner = recentWinner;
+
+        s_raffleState = RaffleState.OPEN;
+        s_players = new address payable[](0);
+        s_lastTimeStamp = block.timestamp;
+        emit WinnerPicked(recentWinner);
+
+        // Interactions
+        (bool success, ) = recentWinner.call{value: address(this).balance}("");
+        if (!success) {
+            revert Raffle__TransferFailed();
+        }
+    }
 
     /**
      * Getter Functions
