@@ -82,6 +82,11 @@ contract HelperConfig is CodeConstants, Script {
 
         uint256 subscriptionId = vrfCoordinatorMock.createSubscription();
 
+        // Fund both LINK (token) and native (ETH) balances on the local mock
+        // so fulfillments that use native payment succeed in tests.
+        vrfCoordinatorMock.fundSubscription(subscriptionId, 20 ether * 100);
+        vrfCoordinatorMock.fundSubscriptionWithNative{value: 20 ether * 100}(subscriptionId);
+
         vm.stopBroadcast();
 
         localNetworkConfig = NetworkConfig({

@@ -4,34 +4,21 @@ pragma solidity ^0.8.19;
 import {Script} from "forge-std/Script.sol";
 import {Raffle} from "../src/Raffle.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
-import {
-    CreateSubscription,
-    FundSubscription,
-    AddConsumer
-} from "./Interactions.s.sol";
+import {CreateSubscription, FundSubscription, AddConsumer} from "./Interactions.s.sol";
 
 contract DeployRaffle is Script {
     function run() external returns (Raffle, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
 
-        HelperConfig.NetworkConfig memory networkConfig = helperConfig
-            .getConfig();
+        HelperConfig.NetworkConfig memory networkConfig = helperConfig.getConfig();
 
         if (networkConfig.subId == 0) {
             CreateSubscription createSubscription = new CreateSubscription();
-            (
-                networkConfig.subId,
-                networkConfig.vrfCoordinator
-            ) = createSubscription.createSubscription(
-                networkConfig.vrfCoordinator
-            );
+            (networkConfig.subId, networkConfig.vrfCoordinator) =
+                createSubscription.createSubscription(networkConfig.vrfCoordinator);
 
             FundSubscription fundSubscription = new FundSubscription();
-            fundSubscription.fundSubscription(
-                networkConfig.vrfCoordinator,
-                networkConfig.subId,
-                networkConfig.link
-            );
+            fundSubscription.fundSubscription(networkConfig.vrfCoordinator, networkConfig.subId, networkConfig.link);
         }
 
         vm.startBroadcast();
@@ -46,11 +33,7 @@ contract DeployRaffle is Script {
         vm.stopBroadcast();
 
         AddConsumer addConsumer = new AddConsumer();
-        addConsumer.addConsumer(
-            address(raffle),
-            networkConfig.vrfCoordinator,
-            networkConfig.subId
-        );
+        addConsumer.addConsumer(address(raffle), networkConfig.vrfCoordinator, networkConfig.subId);
 
         return (raffle, helperConfig);
     }
