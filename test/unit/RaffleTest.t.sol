@@ -3,14 +3,14 @@ pragma solidity ^0.8.19;
 
 import {Raffle} from "src/Raffle.sol";
 import {DeployRaffle} from "script/DeployRaffle.s.sol";
-import {HelperConfig} from "script/HelperConfig.s.sol";
+import {HelperConfig, CodeConstants} from "script/HelperConfig.s.sol";
 import {Test} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {
     VRFCoordinatorV2_5Mock
 } from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
-contract RaffleTest is Test {
+contract RaffleTest is Test, CodeConstants {
     Raffle public raffle;
     HelperConfig public helperConfig;
 
@@ -185,6 +185,7 @@ contract RaffleTest is Test {
     function testFulfilRandomWordsPicksAWinnerResetAndSendsMoney()
         public
         raffleEntered
+        skipFork
     {
         uint256 additionalEntrance = 3;
         uint256 startingIndex = 1;
@@ -230,6 +231,16 @@ contract RaffleTest is Test {
         raffle.enterRaffle{value: entranceFee}();
         vm.warp(block.timestamp + interval + 1);
         vm.roll(block.number + 1);
+        _;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                               SKIP FORK
+    //////////////////////////////////////////////////////////////*/
+    modifier skipFork() {
+        if (block.chainid != LOCAL_CHAIN_ID) {
+            return;
+        }
         _;
     }
 }

@@ -28,6 +28,7 @@ contract HelperConfig is CodeConstants, Script {
         uint256 subId;
         uint32 callbackGasLimit;
         address link;
+        address account;
     }
 
     NetworkConfig public localNetworkConfig;
@@ -50,7 +51,8 @@ contract HelperConfig is CodeConstants, Script {
                 gasLane: 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae,
                 subId: 0,
                 callbackGasLimit: 500000,
-                link: 0x779877A7B0D9E8603169DdbD7836e478b4624789
+                link: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
+                account: 0x99c9347D21E571AA497f4bE993CB26B08aF48744
             });
     }
 
@@ -82,10 +84,7 @@ contract HelperConfig is CodeConstants, Script {
 
         uint256 subscriptionId = vrfCoordinatorMock.createSubscription();
 
-        // Fund both LINK (token) and native (ETH) balances on the local mock
-        // so fulfillments that use native payment succeed in tests.
         vrfCoordinatorMock.fundSubscription(subscriptionId, 20 ether * 100);
-        vrfCoordinatorMock.fundSubscriptionWithNative{value: 20 ether * 100}(subscriptionId);
 
         vm.stopBroadcast();
 
@@ -96,7 +95,8 @@ contract HelperConfig is CodeConstants, Script {
             gasLane: 0x79d3d8832d904592c0bf9818b621522c988bb8b0c05cdc3b15aea1b6e8db0c15,
             subId: subscriptionId,
             callbackGasLimit: 500000,
-            link: address(linkToken)
+            link: address(linkToken),
+            account: 0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38
         });
 
         return localNetworkConfig;
